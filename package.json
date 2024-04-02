@@ -6,22 +6,42 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "server": "node ./data.js && json-server --watch db.json --port 8000"
   },
   "dependencies": {
+    "@headlessui/react": "^1.7.18",
+    "@headlessui/tailwindcss": "^0.2.0",
+    "@radix-ui/react-popover": "^1.0.7",
+    "@radix-ui/react-slot": "^1.0.2",
+    "@remixicon/react": "^4.2.0",
+    "@tabler/icons-react": "^3.1.0",
+    "@tremor/react": "^3.15.0",
+    "@types/json-server": "^0.14.7",
+    "axios": "^1.6.8",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.0",
+    "date-fns": "^3.6.0",
+    "json-server": "^1.0.0-alpha.23",
+    "lucide-react": "^0.364.0",
+    "next": "14.1.4",
     "react": "^18",
+    "react-day-picker": "^8.10.0",
     "react-dom": "^18",
-    "next": "14.1.4"
+    "tailwind-merge": "^2.2.2",
+    "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
-    "typescript": "^5",
+    "@faker-js/faker": "^8.4.1",
+    "@tailwindcss/forms": "^0.5.7",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "autoprefixer": "^10.0.1",
-    "postcss": "^8",
-    "tailwindcss": "^3.3.0",
     "eslint": "^8",
-    "eslint-config-next": "14.1.4"
+    "eslint-config-next": "14.1.4",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.3",
+    "typescript": "^5"
   }
 }

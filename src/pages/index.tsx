@@ -1,118 +1,357 @@
-import Image from "next/image";
+import {
+  IconArrowDown,
+  IconArrowUp,
+  IconUserDollar,
+  IconUsers,
+  IconWallet,
+} from "@tabler/icons-react";
+import axios from "axios";
 import { Inter } from "next/font/google";
+
+import { Header } from "../components/Header";
+import { Card } from "../components/Card";
+import { Graphic } from "../components/Graphic";
+import { User } from "../types/User";
+import { Deposit } from "../types/Deposit";
+import { formatToCurrency } from "../utils/formatToCurrency";
+import { Withdrawal } from "../types/Withdrawal";
+import { Wallet } from "../types/Wallet";
+import { AreaChart, BarChart } from "@tremor/react";
+import { GetServerSideProps } from "next";
+import { useState } from "react";
+import { DateRange } from "react-day-picker";
+import { addDays } from "date-fns";
+import { filterByDate } from "@/utils/filterByDate";
+
+interface HomeProps {
+  users: User[];
+  deposits: Deposit[];
+  withdrawals: Withdrawal[];
+  wallets: Wallet[];
+}
 
 const inter = Inter({ subsets: ["latin"] });
 
-export default function Home() {
+export default function Home({
+  deposits,
+  users,
+  wallets,
+  withdrawals,
+}: HomeProps) {
+  const [searchDate, setSearchDate] = useState<DateRange | undefined>({
+    from: addDays(new Date(), -7),
+    to: new Date(),
+  });
+
+  const depositsTotal = deposits
+    .filter((item) => filterByDate(item, searchDate))
+    .reduce((acc, deposit) => acc + deposit.amount, 0);
+
+  const withdrawalsTotal = withdrawals
+    .filter((item) => filterByDate(item, searchDate))
+    .reduce((acc, withdrawal) => acc + withdrawal.amount, 0);
+
+  const netDeposit = depositsTotal - withdrawalsTotal;
+
+  const ftds = users
+    .filter((item) => filterByDate(item, searchDate))
+    .filter((user) => !!user.newUser);
+  const ftdsVolume = ftds.reduce((acc, user) => {
+    const deposit = deposits
+      .filter((item) => filterByDate(item, searchDate))
+      .find((deposit) => deposit.userId === Number(user.id));
+    if (!deposit) return acc;
+
+    return acc + deposit.amount;
+  }, 0);
+
+  const walletsRealTotal = wallets
+    .filter((item) => filterByDate(item, searchDate))
+    .reduce((acc, wallet) => acc + wallet.balance, 0);
+
+  const walletsBonusTotal = wallets
+    .filter((item) => filterByDate(item, searchDate))
+    .reduce((acc, wallet) => acc + wallet.bonusBalance, 0);
+
+  const walletsDemoTotal = wallets
+    .filter((item) => filterByDate(item, searchDate))
+    .reduce((acc, wallet) => acc + wallet.demoBalance, 0);
+
+  const depositsAndWithdrawalsByDate: {
+    date: string;
+    Depósitos: number;
+    Saques: number;
+  }[] = [];
+
+  withdrawals
+    .filter((item) => filterByDate(item, searchDate))
+    .forEach((withdrawal) => {
+      const date = new Date(withdrawal.createdAt).toISOString().split("T")[0];
+      const day = date.split("-")[2];
+      const month = date.split("-")[1];
+      const dataDate = `${day}/${month}`;
+
+      const alreadyExistInstance = depositsAndWithdrawalsByDate.find(
+        (item) => item.date === dataDate
+      );
+
+      if (alreadyExistInstance) {
+        alreadyExistInstance.Saques += withdrawal.amount;
+      } else {
+        depositsAndWithdrawalsByDate.push({
+          date: dataDate,
+          Depósitos: 0,
+          Saques: withdrawal.amount,
+        });
+      }
+    });
+
+  deposits
+    .filter((item) => filterByDate(item, searchDate))
+    .forEach((deposit) => {
+      const date = new Date(deposit.createdAt).toISOString().split("T")[0];
+      const day = date.split("-")[2];
+      const month = date.split("-")[1];
+      const dataDate = `${day}/${month}`;
+
+      const alreadyExistInstance = depositsAndWithdrawalsByDate.find(
+        (item) => item.date === dataDate
+      );
+
+      if (alreadyExistInstance) {
+        alreadyExistInstance.Depósitos += deposit.amount;
+      } else {
+        depositsAndWithdrawalsByDate.push({
+          date: dataDate,
+          Depósitos: deposit.amount,
+          Saques: 0,
+        });
+      }
+    });
+
+  const diaryFtds: {
+    date: string;
+    FTDs: number;
+  }[] = [];
+
+  ftds.forEach((ftd) => {
+    const date = new Date(ftd.createdAt).toISOString().split("T")[0];
+    const day = date.split("-")[2];
+    const month = date.split("-")[1];
+    const dataDate = `${day}/${month}`;
+
+    const alreadyExistInstance = diaryFtds.find(
+      (item) => item.date === dataDate
+    );
+
+    if (alreadyExistInstance) {
+      alreadyExistInstance.FTDs += 1;
+    } else {
+      diaryFtds.push({
+        date: dataDate,
+        FTDs: 1,
+      });
+    }
+  });
+
+  const netDepositDiary: {
+    date: string;
+    Depósitos: number;
+  }[] = [];
+
+  deposits
+    .filter((item) => filterByDate(item, searchDate))
+    .forEach((deposit) => {
+      const date = new Date(deposit.createdAt).toISOString().split("T")[0];
+      const day = date.split("-")[2];
+      const month = date.split("-")[1];
+      const dataDate = `${day}/${month}`;
+
+      const alreadyExistInstance = netDepositDiary.find(
+        (item) => item.date === dataDate
+      );
+
+      if (alreadyExistInstance) {
+        alreadyExistInstance.Depósitos += deposit.amount;
+      } else {
+        netDepositDiary.push({
+          date: dataDate,
+          Depósitos: deposit.amount,
+        });
+      }
+    });
+
+  withdrawals
+    .filter((item) => filterByDate(item, searchDate))
+    .forEach((withdrawal) => {
+      const date = new Date(withdrawal.createdAt).toISOString().split("T")[0];
+      const day = date.split("-")[2];
+      const month = date.split("-")[1];
+      const dataDate = `${day}/${month}`;
+
+      const alreadyExistInstance = netDepositDiary.find(
+        (item) => item.date === dataDate
+      );
+
+      if (alreadyExistInstance) {
+        alreadyExistInstance.Depósitos -= withdrawal.amount;
+      } else {
+        netDepositDiary.push({
+          date: dataDate,
+          Depósitos: -withdrawal.amount,
+        });
+      }
+    });
+
   return (
     <main
-      className={`flex min-h-screen flex-col items-center justify-between p-24 ${inter.className}`}
+      className={`${inter.className} flex bg-[#181818] text-white min-h-screen flex-col items-center gap-10 p-12`}
     >
-      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">src/pages/index.tsx</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:h-auto lg:w-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
-      </div>
+      <Header searchDate={searchDate} setSearchDate={setSearchDate} />
 
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-full sm:before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-full sm:after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700/10 after:dark:from-sky-900 after:dark:via-[#0141ff]/40 before:lg:h-[360px]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
+      <div className="grid lg:grid-cols-3 md:grid-cols-2 sm:grid-cols-1 grid-flow-row gap-6 w-full">
+        <Card
+          title="Depósitos"
+          fields={{
+            VOLUME: formatToCurrency(depositsTotal),
+            QUANTIDADE: deposits.length.toString(),
+            "TICKET MÉDIO": formatToCurrency(depositsTotal / deposits.length),
+          }}
+          icon={<IconArrowUp color="#FD6F10" />}
         />
-      </div>
 
-      <div className="mb-32 grid text-center lg:max-w-5xl lg:w-full lg:mb-0 lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Docs{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
+        <Card
+          fields={{
+            VOLUME: formatToCurrency(withdrawalsTotal),
+            QUANTIDADE: withdrawals.length.toString(),
+            "TICKET MÉDIO": formatToCurrency(
+              withdrawalsTotal / withdrawals.length
+            ),
+          }}
+          title="Saques"
+          icon={<IconArrowDown color="#FD6F10" />}
+        />
 
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Learn{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
+        <Card
+          fields={{
+            VOLUME: formatToCurrency(netDeposit),
+            QUANTIDADE: (deposits.length - withdrawals.length).toString(),
+            "TICKET MÉDIO": formatToCurrency(
+              netDeposit / (deposits.length - withdrawals.length)
+            ),
+          }}
+          title="NET Deposit"
+          icon={<IconArrowDown color="#FD6F10" />}
+        />
 
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Templates{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Discover and deploy boilerplate example Next.js&nbsp;projects.
-          </p>
-        </a>
+        <Card
+          fields={{
+            VOLUME: formatToCurrency(ftdsVolume),
+            QUANTIDADE: ftds.length.toString(),
+            "TICKET MÉDIO": formatToCurrency(ftdsVolume / ftds.length),
+          }}
+          title="FTDs"
+          icon={<IconUserDollar color="#FD6F10" />}
+        />
 
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Deploy{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50 text-balance`}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
+        <Card
+          fields={{
+            REGISTROS: users.length.toString(),
+            KYC: users
+              .filter((user) => user.kyc === "pending")
+              .length.toString(),
+            BLOQUEADOS: users.filter((user) => user.blocked).length.toString(),
+          }}
+          title="Usuários"
+          icon={<IconUsers color="#FD6F10" />}
+        />
+
+        <Card
+          fields={{
+            REAL: formatToCurrency(walletsRealTotal),
+            BÔNUS: formatToCurrency(walletsBonusTotal),
+            DEMO: formatToCurrency(walletsDemoTotal),
+          }}
+          title="Carteiras"
+          icon={<IconWallet color="#FD6F10" />}
+        />
+
+        <Graphic
+          title="Transações diárias"
+          graphic={
+            <AreaChart
+              data={depositsAndWithdrawalsByDate}
+              index="date"
+              valueFormatter={formatToCurrency}
+              categories={["Depósitos", "Saques"]}
+              colors={["orange-300", "orange"]}
+              className="h-80 p-6 w-full"
+            />
+          }
+        />
+
+        <Graphic
+          title="FTD Diário"
+          graphic={
+            <BarChart
+              data={diaryFtds}
+              index="date"
+              categories={["FTDs"]}
+              colors={["orange"]}
+              className="h-80 p-6 w-full"
+            />
+          }
+        />
+
+        <Graphic
+          title="NET Deposit Diário"
+          graphic={
+            <AreaChart
+              data={netDepositDiary}
+              index="date"
+              valueFormatter={formatToCurrency}
+              categories={["Depósitos"]}
+              colors={["orange"]}
+              className="h-80 p-6 w-full"
+            />
+          }
+        />
       </div>
     </main>
   );
 }
+
+export const getServerSideProps: GetServerSideProps = async () => {
+  const { data: users } = await axios.get("http://localhost:8000/users", {
+    params: {
+      _sort: "createdAt",
+    },
+  });
+  const { data: deposits } = await axios.get("http://localhost:8000/deposits", {
+    params: {
+      _sort: "createdAt",
+    },
+  });
+  const { data: withdrawals } = await axios.get(
+    "http://localhost:8000/withdrawals",
+    {
+      params: {
+        _sort: "createdAt",
+      },
+    }
+  );
+  const { data: wallets } = await axios.get("http://localhost:8000/wallets", {
+    params: {
+      _sort: "createdAt",
+    },
+  });
+
+  return {
+    props: {
+      users,
+      deposits,
+      withdrawals,
+      wallets,
+    },
+  };
+};
